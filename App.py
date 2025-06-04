@@ -60,3 +60,47 @@ st.markdown(
 **Suggested HR Prop:** `{hr_prop}`
 """
 )
+# ==============================
+# 📊 Live Player Stat Search
+# ==============================
+
+st.subheader("📊 Real-Time Player Stats (2024 Season)")
+
+def search_player_id(name):
+    try:
+        query = name.replace(" ", "%20")
+        url = f"https://search-api.mlb.com/svc/search/v2/mlb_global/search?query={query}"
+        res = requests.get(url)
+        results = res.json()
+        for item in results.get('docs', []):
+            if 'player_id' in item:
+                return item['player_id']
+    except Exception as e:
+        st.error(f"Error finding player: {e}")
+    return None
+
+def get_player_stats(player_id):
+    try:
+        url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats?stats=season&season=2024"
+        res = requests.get(url)
+        data = res.json()
+        if data['stats'] and data['stats'][0]['splits']:
+            return data['stats'][0]['splits'][0]['stat']
+        else:
+            return {"message": "No stats found."}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Streamlit Input
+player_name = st.text_input("Enter full player name (e.g. Aaron Judge)")
+
+if player_name:
+    with st.spinner("Searching..."):
+        player_id = search_player_id(player_name)
+    if player_id:
+        with st.spinner("Fetching player stats..."):
+            stats = get_player_stats(player_id)
+        st.success(f"Stats for {player_name}")
+        st.json(stats)
+    else:
+        st.error("Player not found or unavailable.")
